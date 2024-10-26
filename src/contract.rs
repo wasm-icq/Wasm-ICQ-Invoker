@@ -5,7 +5,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, IbcRegisterBalanceQuery, InstantiateMsg, QueryBalanceMsg, QueryMsg};
-use crate::state::{CHANNEL_INFO, ICQ_ERRORS, ICQ_RESPONSES};
+use crate::state::{CHANNEL_INFO, ICQ_RESPONSES};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:wasm-icq-invoker";
@@ -75,21 +75,11 @@ fn get_channel_id(deps: Deps) -> StdResult<String> {
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::AllBalances {} => to_json_binary(&query_all_balances(deps)?),
-        QueryMsg::AllErrors {} => to_json_binary(&query_all_errors(deps)?)
     }
 }
 
 fn query_all_balances(deps: Deps) -> StdResult<Vec<(u64, Coin)>> {
     let balances: StdResult<Vec<(u64, Coin)>> = ICQ_RESPONSES
-        .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-        .collect();
-
-    // Convert the result to binary
-    balances
-}
-
-fn query_all_errors(deps: Deps) -> StdResult<Vec<(u64, String)>> {
-    let balances: StdResult<Vec<(u64, String)>> = ICQ_ERRORS
         .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
         .collect();
 

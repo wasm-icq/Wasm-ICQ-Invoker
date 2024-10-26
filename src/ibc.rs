@@ -1,11 +1,11 @@
-use cosmwasm_std::{Binary, DepsMut, Env, from_json, IbcBasicResponse, IbcChannel, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcChannelOpenResponse, IbcOrder, IbcPacket, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse};
+use cosmwasm_std::{DepsMut, Env, from_json, IbcBasicResponse, IbcChannel, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcChannelOpenResponse, IbcOrder, IbcPacket, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 
 use crate::{ContractError, error::Never};
-use crate::ack::{Ack, make_ack_success};
+use crate::ack::{make_ack_fail, make_ack_success};
 use crate::msg::{BalanceResponse, Balances};
-use crate::state::{CHANNEL_INFO, ChannelInfo, ICQ_ERRORS, ICQ_RESPONSES};
+use crate::state::{CHANNEL_INFO, ChannelInfo, ICQ_RESPONSES};
 
 pub const IBC_VERSION: &str = "icq-1";
 
@@ -55,30 +55,28 @@ pub fn ibc_channel_close(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn ibc_packet_receive(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
-    _msg: IbcPacketReceiveMsg,
+    msg: IbcPacketReceiveMsg,
 ) -> Result<IbcReceiveResponse, Never> {
-    Ok(IbcReceiveResponse::new(make_ack_success()).add_attribute("method", "ibc_packet_receive"))
+    let packet = msg.packet;
+
+    do_ibc_packet_receive(deps, &packet).or_else(|err| {
+        Ok(IbcReceiveResponse::new(make_ack_fail(err.to_string()))
+            .add_attribute("action", "ibc_packet_receive")
+            .add_attribute("success", "false")
+            .add_attribute("error", err.to_string())
+        )
+    })
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn ibc_packet_ack(
-    deps: DepsMut,
+    _deps: DepsMut,
     _env: Env,
-    msg: IbcPacketAckMsg,
+    _msg: IbcPacketAckMsg,
 ) -> Result<IbcBasicResponse, ContractError> {
-    let icq_msg: Ack = from_json(&msg.acknowledgement.data)?;
-    match icq_msg {
-        Ack::Result(_) => on_packet_success(deps, msg.acknowledgement.data, msg.original_packet),
-        Ack::Error(error) => {
-            ICQ_ERRORS.save(deps.storage, msg.original_packet.sequence, &error)?;
-            Ok(IbcBasicResponse::new()
-                .add_attribute("method", "ibc_packet_ack")
-                .add_attribute("error", error.to_string())
-                .add_attribute("sequence", msg.original_packet.sequence.to_string()))
-        }
-    }
+    Ok(IbcBasicResponse::new().add_attribute("method", "ibc_packet_ack"))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -128,16 +126,19 @@ pub fn validate_order_and_version(
     Ok(())
 }
 
-fn on_packet_success(deps: DepsMut, result: Binary, packet: IbcPacket) -> Result<IbcBasicResponse, ContractError> {
-    let balance_response: BalanceResponse = from_json(&result)?;
+fn do_ibc_packet_receive(
+    deps: DepsMut,
+    packet: &IbcPacket,
+) -> Result<IbcReceiveResponse, ContractError> {
+    let balance_response: BalanceResponse = from_json(&packet.data)?;
 
     let balances: Balances = balance_response.balances;
     let balance = balances.coins.first().unwrap();
 
     ICQ_RESPONSES.save(deps.storage, packet.sequence, &balance)?;
 
-    Ok(IbcBasicResponse::new()
-        .add_attribute("method", "ibc_packet_ack")
+    Ok(IbcReceiveResponse::new(make_ack_success())
+        .add_attribute("method", "ibc_packet_receive")
         .add_attribute("sequence", packet.sequence.to_string())
     )
 }

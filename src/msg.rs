@@ -22,7 +22,6 @@ pub struct QueryBalanceMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     AllBalances {},
-    AllErrors {}
 }
 
 #[cw_serde]
