@@ -13,7 +13,6 @@ pub enum ExecuteMsg {
 
 #[cw_serde]
 pub struct QueryBalanceMsg {
-    pub chain_id: String,
     pub addr: String,
     pub denom: String,
 }
@@ -26,7 +25,6 @@ pub enum QueryMsg {
 
 #[cw_serde]
 pub struct IbcRegisterBalanceQuery {
-    pub chain_id: String,
     pub addr: String,
     pub denom: String,
 }

@@ -26,6 +26,7 @@ pub fn ibc_channel_connect(
     _env: Env,
     msg: IbcChannelConnectMsg,
 ) -> Result<IbcBasicResponse, ContractError> {
+    deps.api.debug("WASMDEBUG: ibc_channel_connect");
     validate_order_and_version(msg.channel(), msg.counterparty_version())?;
 
     let channel: IbcChannel = msg.into();
@@ -45,6 +46,7 @@ pub fn ibc_channel_close(
     _env: Env,
     msg: IbcChannelCloseMsg,
 ) -> Result<IbcBasicResponse, ContractError> {
+    deps.api.debug("WASMDEBUG: ibc_channel_close");
     let channel = msg.channel().endpoint.channel_id.clone();
     // Reset the state for the channel.
     CHANNEL_INFO.remove(deps.storage);
@@ -59,6 +61,7 @@ pub fn ibc_packet_receive(
     _env: Env,
     msg: IbcPacketReceiveMsg,
 ) -> Result<IbcReceiveResponse, Never> {
+    deps.api.debug("WASMDEBUG: ibc_packet_receive");
     let packet = msg.packet;
 
     do_ibc_packet_receive(deps, &packet).or_else(|err| {
@@ -72,10 +75,11 @@ pub fn ibc_packet_receive(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn ibc_packet_ack(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
     _msg: IbcPacketAckMsg,
 ) -> Result<IbcBasicResponse, ContractError> {
+    deps.api.debug("WASMDEBUG: ibc_packet_ack");
     Ok(IbcBasicResponse::new().add_attribute("method", "ibc_packet_ack"))
 }
 

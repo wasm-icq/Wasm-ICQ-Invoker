@@ -43,7 +43,6 @@ pub fn send_query_balance(
     let channel_id: String = get_channel_id(deps.as_ref())?;
 
     let packet_data: IbcRegisterBalanceQuery = IbcRegisterBalanceQuery {
-        chain_id: msg.chain_id,
         addr: msg.addr,
         denom: msg.denom,
     };
